@@ -1,8 +1,8 @@
-#smockrawl
+# smockrawl
 
 Basic Smockeo API crawler.
 
-##Usage:
+## Usage:
 
 Initialisation:
 `mySmockeo = Smockeo(username, password, smockeo_id)`
