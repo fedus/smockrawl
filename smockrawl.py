@@ -47,13 +47,15 @@ class Smockeo:
 
     def __repr__(self):
         """Representation for the Smockeo object."""
-        return '<Smockeo sensor - ID: {}, authenticated: {}, polled: {}>'.format(self.sensor['id'], self._logged_in, self._last_poll)
+        return '<Smockeo sensor - ID: {}, authenticated: {}, polled: {}>'.format(self.sensor['id'],
+                                                                                 self._logged_in,
+                                                                                 self._last_poll)
 
     def authenticate(self):
         """Logs in to the Smockeo API."""
         r = self._request.post(self.URLS['login'], 
-                          data = {'email': self.login['username'], 'password': self.login['password']},
-                          allow_redirects=False)
+                               data = {'email': self.login['username'], 'password': self.login['password']},
+                               allow_redirects=False)
         if r.status_code == 302:
             self._logged_in = True
         else:
@@ -92,7 +94,7 @@ class Smockeo:
 
         self.sensor['battery_level']        = data1[0].strong.span.string.split('%')[0]
         if '?' in self.sensor['battery_level']:
-        	self.sensor['battery_level'] = self.sensor['battery_level'][-3:].strip()
+            self.sensor['battery_level'] = self.sensor['battery_level'][-3:].strip()
         battery_change_raw                  = data1[1].strong.next_sibling
         self.sensor['last_battery_change']  = dparser.parse(battery_change_raw, dayfirst=True, fuzzy=True)
         self.sensor['signal_quality']       = data1[2].strong.next_sibling.strip().split('%')[0]
@@ -227,10 +229,10 @@ class Smockeo:
 
 
 class AuthException(Exception):
-    '''Raised when there has been an authentication error.'''
+    """Raised when there has been an authentication error."""
 
 class NotAuthException(Exception):
-    '''Raised when API is polled before having been authenticated.'''
+    """Raised when API is polled before having been authenticated."""
 
 class NotPolledException(Exception):
-    '''Raised when a sensor value is requested before API has been polled.'''
+    """Raised when a sensor value is requested before API has been polled."""
