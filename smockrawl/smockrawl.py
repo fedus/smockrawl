@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import asyncio
+import logging
+import socket
+
+import aiohttp
+import async_timeout
+
 from bs4 import BeautifulSoup
 import dateutil.parser as dparser
 from datetime import datetime
 from humanfriendly.tables import format_pretty_table
 
-import sched
-import time
-
-import requests
 import re
 
+logger = logging.getLogger(__name__)
 
 class Smockeo:
     """Holds state of a Smockeo smoke sensor."""
@@ -22,13 +26,12 @@ class Smockeo:
             'incidents': URL_BASE + 'incidents/0/{}/0'}
     INCIDENT_SCOL_NAMES = ['Icon', 'Alert', 'Date']
 
-    def __init__(self, username, password, id):
+    def __init__(self, username, password, id, loop, session):
         """Initialises the class."""
+        self._loop = loop
+        self._session = session
         self._last_poll = None
         self._logged_in = False
-        self._scheduler = sched.scheduler(time.time, time.sleep)
-        self._event     = None
-        self._request = requests.session()
         self.login = {'username': username,
                       'password': password}
         self.sensor = {'id': id,
@@ -53,36 +56,46 @@ class Smockeo:
                                                                                  self._logged_in,
                                                                                  self._last_poll)
 
-    def authenticate(self):
+    async def authenticate(self):
         """Logs in to the Smockeo API."""
-        r = self._request.post(self.URLS['login'], 
-                               data = {'email': self.login['username'], 'password': self.login['password']},
-                               allow_redirects=False)
-        if r.status_code == 302:
-            self._logged_in = True
-        else:
-            raise AuthException('Authentication with Smockeo API failed. Status code: {}'.format(str(r.status_code)))
+        try:
+            async with async_timeout.timeout(5, loop=self._loop):
+                response = await self._session.post(
+                    self.URLS['login'],
+                    data={
+                        'email': self.login['username'],
+                        'password': self.login['password']},
+                    allow_redirects=False)
+
+            if response.status == 302:
+                self._logged_in = True
+            else:
+                logger.error('Authentication failed. Status code: {}'.format(response.status))
+                raise AuthException('Authentication with Smockeo API failed. '
+                                    'Status code: {}'.format(str(response.status)))
+
+        except (asyncio.TimeoutError, aiohttp.ClientError, socket.gaierror):
+            raise ConnectionErrorException('Error loading data from Smockeo.')
 
     def auto_poll(self, activate=True):
         """Starts or stop scheduled polling."""
-        """
-        if activate:
-            self._event = self._scheduler.enter(10, 1, self.poll)
-            self._scheduler.run(blocking=True)
-        else:
-            if self._event is not None:
-              self._scheduler.cancel(self._event)
-              self._event = None
-        """
         raise NotImplementedError
 
-    def poll(self):
+    async def poll(self):
         """Polls the Smockeo API."""
         if self._logged_in:
-            r = self._request.get(self.URLS['detector'].format(self.sensor['id']))
-            self._last_poll = datetime.now()
-            soup = BeautifulSoup(r.text, 'html.parser')
-            self._parse(soup)
+            try:
+                async with async_timeout.timeout(5, loop=self._loop):
+                    response = await self._session.get(
+                        self.URLS['detector'].format(self.sensor['id']))
+
+                data = await response.text()
+                self._last_poll = datetime.now()
+                soup = BeautifulSoup(data.text, 'html.parser')
+                self._parse(soup)
+
+            except (asyncio.TimeoutError, aiohttp.ClientError, socket.gaierror):
+                raise ConnectionErrorException('Error loading data from Smockeo.')
         else:
             raise NotAuthException('Authentication required before polling')
     
@@ -238,3 +251,6 @@ class NotAuthException(Exception):
 
 class NotPolledException(Exception):
     """Raised when a sensor value is requested before API has been polled."""
+
+class ConnectionErrorException(Exception):
+    """Raised when there has been a connection error."""

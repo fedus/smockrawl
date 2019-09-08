@@ -30,6 +30,5 @@ setup(
     keywords='smockeo cobject smoke fire detector api crawl crawler',  # Optional
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),  # Required
     python_requires='>=3.5',
-    install_requires=['beautifulsoup4', 'python-dateutil', 'humanfriendly', 'requests'],  # Optional
-
+    install_requires=['beautifulsoup4', 'python-dateutil', 'humanfriendly', 'aiohttp', 'async_timeout'],  # Optional
 )
