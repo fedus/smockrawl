@@ -8,7 +8,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name='smockrawl',  # Required
-    version='0.1.2',  # Required
+    version='0.2',  # Required
     description='Smockeo API crawler',  # Optional
     long_description=README,
     long_description_content_type="text/markdown",
@@ -30,6 +30,5 @@ setup(
     keywords='smockeo cobject smoke fire detector api crawl crawler',  # Optional
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),  # Required
     python_requires='>=3.5',
-    install_requires=['beautifulsoup4', 'python-dateutil', 'humanfriendly', 'requests'],  # Optional
-
+    install_requires=['beautifulsoup4', 'python-dateutil', 'humanfriendly', 'aiohttp', 'async_timeout'],  # Optional
 )
