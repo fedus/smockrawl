@@ -8,7 +8,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name='smockrawl',  # Required
-    version='0.2',  # Required
+    version='0.2.1',  # Required
     description='Smockeo API crawler',  # Optional
     long_description=README,
     long_description_content_type="text/markdown",
