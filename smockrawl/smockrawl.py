@@ -17,6 +17,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
+
 class Smockeo:
     """Holds state of a Smockeo smoke sensor."""
 
@@ -71,6 +72,7 @@ class Smockeo:
                 self._logged_in = True
             else:
                 logger.error('Authentication failed. Status code: {}'.format(response.status))
+                logger.debug('Content: {}'.format(await response.text()))
                 raise AuthException('Authentication with Smockeo API failed. '
                                     'Status code: {}'.format(str(response.status)))
 
@@ -85,13 +87,13 @@ class Smockeo:
         """Polls the Smockeo API."""
         if self._logged_in:
             try:
-                async with async_timeout.timeout(5, loop=self._loop):
+                async with async_timeout.timeout(10, loop=self._loop):
                     response = await self._session.get(
                         self.URLS['detector'].format(self.sensor['id']))
 
                 data = await response.text()
                 self._last_poll = datetime.now()
-                soup = BeautifulSoup(data.text, 'html.parser')
+                soup = BeautifulSoup(data, 'html.parser')
                 self._parse(soup)
 
             except (asyncio.TimeoutError, aiohttp.ClientError, socket.gaierror):
