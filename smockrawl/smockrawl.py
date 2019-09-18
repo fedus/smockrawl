@@ -4,6 +4,7 @@
 import asyncio
 import logging
 import socket
+import traceback
 
 import aiohttp
 import async_timeout
@@ -60,7 +61,7 @@ class Smockeo:
     async def authenticate(self):
         """Logs in to the Smockeo API."""
         try:
-            async with async_timeout.timeout(5, loop=self._loop):
+            async with async_timeout.timeout(10, loop=self._loop):
                 response = await self._session.post(
                     self.URLS['login'],
                     data={
@@ -77,7 +78,7 @@ class Smockeo:
                                     'Status code: {}'.format(str(response.status)))
 
         except (asyncio.TimeoutError, aiohttp.ClientError, socket.gaierror):
-            raise ConnectionErrorException('Error loading data from Smockeo.')
+            raise ConnectionErrorException('Error loading data from Smockeo. Exception: {}'.format(traceback.format_exc()))
 
     def auto_poll(self, activate=True):
         """Starts or stop scheduled polling."""
@@ -87,17 +88,26 @@ class Smockeo:
         """Polls the Smockeo API."""
         if self._logged_in:
             try:
-                async with async_timeout.timeout(10, loop=self._loop):
+                async with async_timeout.timeout(15, loop=self._loop):
                     response = await self._session.get(
-                        self.URLS['detector'].format(self.sensor['id']))
+                        self.URLS['detector'].format(self.sensor['id']),
+                        allow_redirects=False
+                    )
 
-                data = await response.text()
-                self._last_poll = datetime.now()
-                soup = BeautifulSoup(data, 'html.parser')
-                self._parse(soup)
+                if response.status == 200:
+                    data = await response.text()
+                    self._last_poll = datetime.now()
+                    soup = BeautifulSoup(data, 'html.parser')
+                    self._parse(soup)
+                else:
+                    self._logged_in = False
+                    logger.error('Polling failed. Status code: {}'.format(response.status))
+                    logger.debug('Content: {}'.format(await response.text()))
+                    raise PollException('Polling the Smockeo API failed. '
+                                        'Status code: {}'.format(str(response.status)))
 
             except (asyncio.TimeoutError, aiohttp.ClientError, socket.gaierror):
-                raise ConnectionErrorException('Error loading data from Smockeo.')
+                raise ConnectionErrorException('Error loading data from Smockeo. Exception: {}'.format(traceback.format_exc()))
         else:
             raise NotAuthException('Authentication required before polling')
     
@@ -221,6 +231,11 @@ class Smockeo:
         """Returns the activation date of the sensor."""
         return self._fetch_sensor_value('activation_date')
 
+    @property
+    def authenticated(self):
+        """Returns authentication status."""
+        return self._logged_in
+
     def print_status(self):
         """Prints sensor information."""
         print('*** SMOCKEO SENSOR ID {} ***'.format(self.id))
@@ -250,6 +265,9 @@ class AuthException(Exception):
 
 class NotAuthException(Exception):
     """Raised when API is polled before having been authenticated."""
+
+class PollException(Exception):
+    """Raised when polling failed."""
 
 class NotPolledException(Exception):
     """Raised when a sensor value is requested before API has been polled."""
