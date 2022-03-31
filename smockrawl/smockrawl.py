@@ -28,9 +28,8 @@ class Smockeo:
             'incidents': URL_BASE + 'incidents/0/{}/0'}
     INCIDENT_SCOL_NAMES = ['Icon', 'Alert', 'Date']
 
-    def __init__(self, username, password, id, loop, session):
+    def __init__(self, username, password, id, session):
         """Initialises the class."""
-        self._loop = loop
         self._session = session
         self._last_poll = None
         self._logged_in = False
@@ -61,7 +60,7 @@ class Smockeo:
     async def authenticate(self):
         """Logs in to the Smockeo API."""
         try:
-            async with async_timeout.timeout(10, loop=self._loop):
+            async with async_timeout.timeout(10):
                 response = await self._session.post(
                     self.URLS['login'],
                     data={
@@ -88,7 +87,7 @@ class Smockeo:
         """Polls the Smockeo API."""
         if self._logged_in:
             try:
-                async with async_timeout.timeout(15, loop=self._loop):
+                async with async_timeout.timeout(15):
                     response = await self._session.get(
                         self.URLS['detector'].format(self.sensor['id']),
                         allow_redirects=False

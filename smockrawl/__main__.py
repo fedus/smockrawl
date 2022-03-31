@@ -8,11 +8,10 @@ from smockrawl.smockrawl import Smockeo
 
 
 def main ():
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(crawl(loop, sys.argv[1:]))
+    asyncio.run(crawl(sys.argv[1:]))
 
 
-async def crawl(loop, argv):
+async def crawl(argv):
     username = None
     password = None
     detectorId = None
@@ -39,7 +38,7 @@ async def crawl(loop, argv):
         detectorId = input("Smockeo detector ID: ")
 
     async with aiohttp.ClientSession() as session:
-        smo = Smockeo(username, password, detectorId, loop, session)
+        smo = Smockeo(username, password, detectorId, session)
 
         await smo.authenticate()
         await smo.poll()
